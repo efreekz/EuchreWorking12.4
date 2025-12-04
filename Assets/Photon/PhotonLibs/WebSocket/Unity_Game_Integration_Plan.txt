@@ -1,0 +1,225 @@
+UNITY WEBGL GAME INTEGRATION PLAN
+=====================================
+
+OVERVIEW
+--------
+This document outlines the integration plan for Unity WebGL games with the FFLogin WordPress plugin system. The architecture uses a client-master setup where client sites proxy user data to a master site for centralized user management.
+
+CURRENT SYSTEM STATUS
+--------------------
+✅ FFLogin plugin fully functional on both client and master sites
+✅ User authentication and account management working
+✅ Client-master API communication established
+✅ Users login and are redirected to /account page
+✅ Account page shows user balance and profile information
+
+GAME INTEGRATION REQUIREMENTS
+-----------------------------
+1. Unity build: WebGL format
+2. Deployment: Same domain as WordPress site
+3. Game earnings: Players earn freekz only at the end of a game
+4. Session tracking: Games need to track session data
+5. Authentication: Automatic session inheritance (no token management needed)
+
+ARCHITECTURE FLOW
+-----------------
+User Login → /account page → Link to /game → Unity Game runs
+
+Data Flow:
+Unity Game ↔ Client Site API ↔ Master Site Database
+
+AUTHENTICATION STRATEGY
+-----------------------
+Since Unity WebGL runs on the same domain as the WordPress client site:
+- Unity automatically inherits the user's WordPress session
+- No need for separate token management or authentication
+- Unity can make API calls as the logged-in user
+- Session remains active throughout gameplay
+
+API ENDPOINTS TO BE CREATED
+===========================
+
+CLIENT SITE ENDPOINTS (Proxy Layer)
+-----------------------------------
+These endpoints act as proxies between Unity and the master site:
+
+1. GET /wp-json/fflogin/v1/game/get-balance
+   Purpose: Get current user's freekz balance
+   Unity Usage: Check balance before/during game
+   
+2. POST /wp-json/fflogin/v1/game/start-session
+   Purpose: Start a new game session
+   Unity Usage: Call when game begins
+   Data: { game_type: "euchre", difficulty: "normal" }
+   
+3. POST /wp-json/fflogin/v1/game/complete-session
+   Purpose: Complete game and award freekz
+   Unity Usage: Call when game ends successfully
+   Data: { session_id: "abc123", freekz_earned: 50, game_result: "win" }
+   
+4. POST /wp-json/fflogin/v1/game/spend-freekz
+   Purpose: Spend freekz during gameplay (if needed)
+   Unity Usage: For in-game purchases/power-ups
+   Data: { amount: 25, item: "power_up", description: "Extra card" }
+
+MASTER SITE ENDPOINTS (Data Layer)
+----------------------------------
+These endpoints handle the actual database operations:
+
+1. GET /wp-json/fflogin/v1/client/game/get-balance
+2. POST /wp-json/fflogin/v1/client/game/start-session
+3. POST /wp-json/fflogin/v1/client/game/complete-session
+4. POST /wp-json/fflogin/v1/client/game/spend-freekz
+
+UNITY IMPLEMENTATION GUIDE
+==========================
+
+UNITY C# CODE STRUCTURE
+-----------------------
+```csharp
+// Main game manager class
+public class FFLoginGameManager : MonoBehaviour 
+{
+    private string apiBaseUrl = ""; // Will be set to current domain
+    private int currentBalance = 0;
+    private string currentSessionId = "";
+    
+    // Call on game start
+    public void StartGame()
+    
+    // Call when game ends successfully  
+    public void CompleteGame(int freekzEarned)
+    
+    // Call to check balance
+    public void GetBalance()
+    
+    // Call to spend freekz (optional)
+    public void SpendFreekz(int amount, string item)
+}
+```
+
+API CALL EXAMPLES FOR UNITY
+---------------------------
+
+1. GET BALANCE:
+```csharp
+UnityWebRequest request = UnityWebRequest.Get(apiBaseUrl + "/wp-json/fflogin/v1/game/get-balance");
+// Include credentials for session
+request.SetRequestHeader("X-Requested-With", "XMLHttpRequest");
+```
+
+2. START GAME SESSION:
+```csharp
+string jsonData = JsonUtility.ToJson(new { 
+    game_type = "euchre", 
+    difficulty = "normal" 
+});
+UnityWebRequest request = UnityWebRequest.Post(apiBaseUrl + "/wp-json/fflogin/v1/game/start-session", jsonData, "application/json");
+```
+
+3. COMPLETE GAME:
+```csharp
+string jsonData = JsonUtility.ToJson(new { 
+    session_id = currentSessionId,
+    freekz_earned = 50,
+    game_result = "win"
+});
+UnityWebRequest request = UnityWebRequest.Post(apiBaseUrl + "/wp-json/fflogin/v1/game/complete-session", jsonData, "application/json");
+```
+
+SESSION MANAGEMENT
+-----------------
+- Unity inherits WordPress session automatically (same domain)
+- No need to handle login/logout in Unity
+- If session expires, Unity API calls will return 401 error
+- Game should handle 401 by redirecting to login page
+
+ERROR HANDLING
+--------------
+Unity should handle these scenarios:
+- Network errors (show retry option)
+- Authentication errors (redirect to login)
+- Insufficient balance errors (show balance, offer to earn more)
+- Session expired errors (redirect to login)
+
+GAME FLOW EXAMPLE
+----------------
+1. User logs into WordPress → redirected to /account
+2. User clicks "Play Game" link → goes to /game
+3. Unity game loads and calls GetBalance()
+4. Unity calls StartGame() when user clicks "Start"
+5. User plays the game
+6. When game ends successfully, Unity calls CompleteGame(freekzEarned)
+7. User's balance is updated automatically
+8. Game can call GetBalance() to show new balance
+
+DEVELOPMENT PHASES
+=================
+
+PHASE 1: API ENDPOINTS
+---------------------
+- Create client-side proxy endpoints
+- Create master-side data endpoints
+- Test endpoints with Postman/curl
+
+PHASE 2: UNITY INTEGRATION
+-------------------------
+- Implement FFLoginGameManager class
+- Create API call methods
+- Add error handling and user feedback
+- Test session inheritance
+
+PHASE 3: GAME FLOW
+-----------------
+- Integrate with actual game mechanics
+- Add balance display in game UI
+- Implement freekz earning logic
+- Test complete user journey
+
+PHASE 4: POLISH & TESTING
+------------------------
+- Add loading indicators
+- Improve error messages
+- Test edge cases (network issues, session expiry)
+- Performance optimization
+
+TECHNICAL NOTES
+===============
+
+SECURITY CONSIDERATIONS
+----------------------
+- All API calls use WordPress nonces for CSRF protection
+- Client-master communication uses Basic Auth
+- User session validation on every request
+- Input sanitization and validation
+
+WORDPRESS INTEGRATION
+--------------------
+- Game page can be a WordPress page with Unity embedded
+- Use WordPress hooks for user management
+- Leverage existing FFLogin user meta system
+- Maintain consistency with existing UI/UX
+
+DATABASE CHANGES
+---------------
+Potential new tables/fields needed:
+- Game sessions table (track active/completed games)
+- Transaction history (freekz earning/spending logs)
+- Game statistics (wins/losses, time played)
+
+DEPLOYMENT CONSIDERATIONS
+------------------------
+- Unity WebGL build optimization for web
+- CDN considerations for game assets
+- Caching strategies for API responses
+- Mobile responsiveness testing
+
+NEXT STEPS
+==========
+1. Implement API endpoints (both client and master)
+2. Create Unity C# integration code
+3. Set up development environment for testing
+4. Create /game WordPress page with Unity embed
+5. Test complete user flow from login to game completion
+
+This architecture ensures seamless integration between WordPress user management and Unity gameplay while maintaining security and performance standards.

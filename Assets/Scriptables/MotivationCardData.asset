@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 63d71b459a9a4ab4854602eb8d6c0077, type: 3}
+  m_Name: MotivationCardData
+  m_EditorClassIdentifier: 
+  motivationCards:
+  - title: Start a Match!
+    message: Create the first room and compete!
+    icon: {fileID: -3479061504300586076, guid: 04653f74e191464468ba297c5378b9ba, type: 3}
+  - title: Bigger Stakes!
+    message: High stakes, bigger wins!
+    icon: {fileID: 21300000, guid: 7a98ff7d7ad404cedae9f5276e123d12, type: 3}
+  - title: Play With Strangers
+    message: Make new allies, or rivals!
+    icon: {fileID: 1308073370155012057, guid: d40e0745b5cc8b64ea356707233f40b9, type: 3}
+  - title: Quick Round!
+    message: Ready players join faster here!
+    icon: {fileID: 21300000, guid: b7d7e36f0c41c4316a6ea75d0a9321a6, type: 3}
+  - title: "You\u2019re the Boss"
+    message: 'Host and control the table!
+
+'
+    icon: {fileID: 21300000, guid: f906e57fb43bb4c48b8705c36ff4bafa, type: 3}
+  - title: Win More!
+    message: Gain rewards when players join!
+    icon: {fileID: 21300000, guid: 1230a91a23d0849128d2f8c63b5996fe, type: 3}
+  - title: Your Rules
+    message: Set stakes & play your way!
+    icon: {fileID: 21300000, guid: 949f7004ed54344bebb60dbafccfa660, type: 3}
+  - title: Challenge Others
+    message: Let them try to beat YOU!
+    icon: {fileID: 21300000, guid: 9923687cb4b1746aa8948dc497b2ba79, type: 3}
+  - title: Be a Leader
+    message: Every room starts with a leader.
+    icon: {fileID: -7073790317142723381, guid: db6db7ceeadc1f94cb665d67ce6a2b99, type: 3}
+  - title: Instant Match
+    message: Create now & skip the wait!
+    icon: {fileID: 21300000, guid: 737084c85e7ce40359a08fd9fce48e63, type: 3}
