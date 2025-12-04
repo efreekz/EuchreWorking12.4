@@ -29,7 +29,7 @@ namespace Ui.GamePlayScreens
         [SerializeField] private Button orderUpButton;
         [SerializeField] private Button orderUpAndGoAloneButton;
         [SerializeField] private TMP_Text orderUpText;
-        [SerializeField] private string dealerText = "Pick It Up";
+        [SerializeField] private string dealerText = "It Lives";
         [SerializeField] private SuitButton[] suitButtons;
         [SerializeField] private Slider timer;
         [SerializeField] private float time = 30f;

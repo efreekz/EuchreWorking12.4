@@ -18,7 +18,7 @@ namespace Ui.GamePlayScreens
         [SerializeField] private Button orderUpButton;
         [SerializeField] private Button orderUpAndGoAloneButton;
         [SerializeField] private TMP_Text orderUpText;
-        [SerializeField] private string dealerText = "Pick It Up";
+        [SerializeField] private string dealerText = "It Lives";
         [SerializeField] private Image suitImage;
         [SerializeField] private Transform cardDisplayParent;
         [SerializeField] private Slider timer;

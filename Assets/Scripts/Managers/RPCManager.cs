@@ -23,6 +23,19 @@ namespace Managers
                 return JoinedPlayers.All(joinedPlayer => joinedPlayer.IsInitialized);
             }
         }
+
+        // Bot name pool
+        private static readonly string[] BotNames = new string[]
+        {
+            "RichW", "UncleJoe", "LannyW", "RickV", "MattB", "BethL", "SeanW", "DanP",
+            "AlexaS", "DavidC", "PatrickF", "LonnieA", "JenniferD", "LyndaT", "ChuckH",
+            "KevinF", "HarveyH", "KenZ", "AndyJ", "DerekK", "BillN", "JeffA",
+            "JedT", "RussellH", "TimK", "DebN", "DorothyS", "JenniferR", "JonathanP",
+            "TimD", "AndrewF"
+        };
+
+        // Track used bot names in current game to avoid duplicates
+        private List<string> _usedBotNames = new List<string>();
         
         private void Awake()
         {
@@ -93,7 +106,7 @@ namespace Managers
             botData.IsBot = true;
             botData.PlayerId = seatIndex;
             botData.PlayerRef = MultiplayerManager.Instance.LocalPlayerRef;
-            botData.Name = $"Bot {botData.PlayerId + 1}";
+            botData.Name = GetRandomBotName();
             botData.PLayerInfoId = "BOT";
             botData.IsInitialized = true;
             
@@ -101,12 +114,46 @@ namespace Managers
 
             RPC_AddPlayer(botData);
             
-            GameLogger.ShowLog($"🤖 Bot {seatIndex + 1} joined with simulated PlayerRef {botData.PlayerId}");
+            GameLogger.ShowLog($"🤖 Bot '{botData.Name}' joined at seat {seatIndex}");
+        }
+
+        /// <summary>
+        /// Gets a random bot name from the pool, avoiding duplicates when possible
+        /// </summary>
+        private string GetRandomBotName()
+        {
+            // If all names are used, reset the pool
+            if (_usedBotNames.Count >= BotNames.Length)
+            {
+                _usedBotNames.Clear();
+            }
+
+            // Get available names (not yet used in this game)
+            var availableNames = BotNames.Where(name => !_usedBotNames.Contains(name)).ToList();
+
+            // If somehow no names available (shouldn't happen), use all names
+            if (availableNames.Count == 0)
+            {
+                availableNames = BotNames.ToList();
+            }
+
+            // Select random name from available pool
+            var selectedName = availableNames[UnityEngine.Random.Range(0, availableNames.Count)];
+            _usedBotNames.Add(selectedName);
+
+            return selectedName;
         }
 
         public void ClearSeat(int seatIndex) {
             if (seatIndex < 0 || seatIndex >= JoinedPlayers.Length) return;
             var d = JoinedPlayers[seatIndex];
+            
+            // If clearing a bot, remove its name from used list
+            if (d.IsBot && !string.IsNullOrEmpty(d.Name.ToString()))
+            {
+                _usedBotNames.Remove(d.Name.ToString());
+            }
+            
             d.Occupied = false;
             d.IsBot = false;
             d.PlayerRef = default;

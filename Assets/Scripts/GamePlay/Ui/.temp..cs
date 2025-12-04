@@ -39,6 +39,21 @@ namespace GamePlay.Ui
         private void Awake()
         {
             _cancellationToken = new CancellationTokenSource();
+            
+            // Ensure text elements always face the camera
+            EnsureFacingCamera(messageParent);
+            EnsureFacingCamera(dealerObject.transform as RectTransform);
+        }
+        
+        private void EnsureFacingCamera(RectTransform target)
+        {
+            if (target == null) return;
+            
+            // Add FaceCameraUI component if it doesn't exist
+            if (target.GetComponent<FaceCameraUI>() == null)
+            {
+                target.gameObject.AddComponent<FaceCameraUI>();
+            }
         }
 
         private void OnDestroy()
