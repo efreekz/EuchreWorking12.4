@@ -39,6 +39,7 @@ namespace GamePlay.Ui
         private void Awake()
         {
             _cancellationToken = new CancellationTokenSource();
+            EnsureMessageIsUpright();
         }
 
         private void OnDestroy()
@@ -127,6 +128,20 @@ namespace GamePlay.Ui
         {
             _isMessageForced = false;
             messageParent.gameObject.SetActive(false);
+        }
+
+        private void EnsureMessageIsUpright()
+        {
+            if (messageParent == null)
+                return;
+
+            messageParent.rotation = Quaternion.identity;
+
+            var scale = messageParent.localScale;
+            messageParent.localScale = new Vector3(
+                Mathf.Abs(scale.x) < Mathf.Epsilon ? 1f : Mathf.Abs(scale.x),
+                Mathf.Abs(scale.y) < Mathf.Epsilon ? 1f : Mathf.Abs(scale.y),
+                Mathf.Abs(scale.z) < Mathf.Epsilon ? 1f : Mathf.Abs(scale.z));
         }
 
         public void SetDealer(bool enable)

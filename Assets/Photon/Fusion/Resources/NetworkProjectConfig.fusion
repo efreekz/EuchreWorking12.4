@@ -29,7 +29,7 @@
         "MaxObjectDestroysSentPerPacket": 32
     },
     "Network": {
-        "ConnectionTimeout": 10.0,
+        "ConnectionTimeout": 20.0,
         "ConnectionShutdownTime": 1.0,
         "ReliableDataTransferModes": 3
     },

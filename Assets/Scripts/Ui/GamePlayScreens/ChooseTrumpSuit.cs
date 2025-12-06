@@ -27,6 +27,7 @@ namespace Ui.GamePlayScreens
         private float _timeToPass; 
         private Card _selectedCard;
         private TaskCompletionSource<int> _choiceTaskSource;
+        private Suit _chosenTrumpSuit = Suit.None;
         
         // 0 means player has passed
         // 1 means player has accepted
@@ -72,7 +73,7 @@ namespace Ui.GamePlayScreens
                 if (GamePlayControllerNetworked.Instance.playerManager.GetLocalPlayerBase().PlayerIndex == GamePlayControllerNetworked.Instance.playerManager.DealerIndex)
                     orderUpText.text = dealerText;
                 else
-                    orderUpText.text = "Order Up";
+                    orderUpText.text = "Trump";
                 
                 StartCoroutine(TimerCoroutine());
             }
@@ -84,6 +85,7 @@ namespace Ui.GamePlayScreens
             passButton.onClick.AddListener(OnClickPassButton);
             orderUpButton.onClick.AddListener(OnClickOrderUpButton);
             orderUpAndGoAloneButton.onClick.AddListener(OnClickOrderUpAndGoAloneButton);
+            GamePlayControllerNetworked.Instance.OnTrumpSuitSetAndDisplayed += OnTrumpSetAndDisplayed;
 
         }
 
@@ -94,6 +96,12 @@ namespace Ui.GamePlayScreens
             
             passButton.onClick.RemoveAllListeners();
             orderUpButton.onClick.RemoveAllListeners();
+            orderUpAndGoAloneButton.onClick.RemoveAllListeners();
+
+            passButton.interactable = true;
+            orderUpButton.interactable = true;
+            orderUpAndGoAloneButton.interactable = true;
+            GamePlayControllerNetworked.Instance.OnTrumpSuitSetAndDisplayed -= OnTrumpSetAndDisplayed;
         }
 
         private IEnumerator TimerCoroutine()
@@ -124,19 +132,35 @@ namespace Ui.GamePlayScreens
         
         private void OnClickPassButton()
         {
+            passButton.interactable = false;
+            orderUpButton.interactable = false;
+            orderUpAndGoAloneButton.interactable = false;
             _choiceTaskSource?.TrySetResult(0);
             UiManager.Instance.HidePanel(this);
         }
 
         private void OnClickOrderUpButton()
         {
+            _chosenTrumpSuit = _selectedCard.cardData.suit;
+            orderUpText.text = $"{_chosenTrumpSuit} is Trump";
             _choiceTaskSource?.TrySetResult(1);
-            UiManager.Instance.HidePanel(this);;
+            passButton.interactable = false;
+            orderUpButton.interactable = false;
+            orderUpAndGoAloneButton.interactable = false;
         }
         
         private void OnClickOrderUpAndGoAloneButton()
         {
+            _chosenTrumpSuit = _selectedCard.cardData.suit;
+            orderUpText.text = $"{_chosenTrumpSuit} is Trump";
             _choiceTaskSource?.TrySetResult(2);
+            passButton.interactable = false;
+            orderUpButton.interactable = false;
+            orderUpAndGoAloneButton.interactable = false;
+        }
+
+        private void OnTrumpSetAndDisplayed()
+        {
             UiManager.Instance.HidePanel(this);
         }
 

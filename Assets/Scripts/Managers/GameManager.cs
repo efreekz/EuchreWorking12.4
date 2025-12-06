@@ -92,7 +92,7 @@ namespace Managers
 
         public static async UniTask RefreshPlayerData()
         {
-            // Refresh player data from Supabase token manager
+            // Refresh player data from Supabase API (fetch fresh balance)
             if (SupabaseTokenManager.Instance != null && SupabaseTokenManager.Instance.HasValidSession())
             {
                 GameLogger.LogNetwork("Refreshing player data from Supabase...");
@@ -104,9 +104,18 @@ namespace Managers
                     UserData.email = SupabaseTokenManager.Instance.UserEmail;
                 }
                 
-                CurrencyManager.Freekz = (int)SupabaseTokenManager.Instance.Balance;
-                
-                GameLogger.LogNetwork($"Player data refreshed: {SupabaseTokenManager.Instance.Username}, Balance: {CurrencyManager.Freekz} FZ");
+                // Fetch fresh balance from Supabase API instead of using cached value
+                var balanceCheck = await SupabaseCurrencyController.CheckBalance(0);
+                if (balanceCheck.Success)
+                {
+                    CurrencyManager.Freekz = balanceCheck.CurrentBalance;
+                    SupabaseTokenManager.Instance.UpdateBalance(balanceCheck.CurrentBalance);
+                    GameLogger.LogNetwork($"Player data refreshed: {SupabaseTokenManager.Instance.Username}, Balance: {CurrencyManager.Freekz} FZ");
+                }
+                else
+                {
+                    GameLogger.LogNetwork($"Failed to fetch fresh balance: {balanceCheck.Error}", GameLogger.LogType.Warning);
+                }
             }
             else
             {

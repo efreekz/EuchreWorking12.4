@@ -42,6 +42,7 @@ namespace Ui.GamePlayScreens
         private Coroutine _timeoutCoroutine;
         private float _timeToPass;
         private Tweener _shakeTween;
+        private Suit _chosenTrumpSuit = Suit.None;
 
         protected override void Initialize(Object data)
         {
@@ -103,6 +104,7 @@ namespace Ui.GamePlayScreens
             passButton.onClick.AddListener(OnClickPassButton);
             orderUpButton.onClick.AddListener(OnClickOrderItUpButton);
             orderUpAndGoAloneButton.onClick.AddListener(OnClickOrderItUpAndGoAloneButton);
+            GamePlayControllerNetworked.Instance.OnTrumpSuitSetAndDisplayed += OnTrumpSetAndDisplayed;
         }
 
         protected override void Cleanup()
@@ -118,26 +120,42 @@ namespace Ui.GamePlayScreens
                 suitButton.toggle.onValueChanged.RemoveAllListeners();
             }
 
+            passButton.interactable = true;
+            orderUpButton.interactable = true;
+            orderUpAndGoAloneButton.interactable = true;
+            GamePlayControllerNetworked.Instance.OnTrumpSuitSetAndDisplayed -= OnTrumpSetAndDisplayed;
+
             if (_timeoutCoroutine != null)
                 StopCoroutine(_timeoutCoroutine);
         }
 
         private void OnClickPassButton()
         {
+            passButton.interactable = false;
+            orderUpButton.interactable = false;
+            orderUpAndGoAloneButton.interactable = false;
             _choiceTaskSource?.TrySetResult((Suit.None, 0));
             UiManager.Instance.HidePanel(this);
         }
 
         private void OnClickOrderItUpButton()
         {
+            _chosenTrumpSuit = _selectedSuit;
+            orderUpText.text = $"{_chosenTrumpSuit} is Trump";
             _choiceTaskSource?.TrySetResult((_selectedSuit, 1));
-            UiManager.Instance.HidePanel(this);
+            passButton.interactable = false;
+            orderUpButton.interactable = false;
+            orderUpAndGoAloneButton.interactable = false;
         }
 
         private void OnClickOrderItUpAndGoAloneButton()
         {
+            _chosenTrumpSuit = _selectedSuit;
+            orderUpText.text = $"{_chosenTrumpSuit} is Trump";
             _choiceTaskSource?.TrySetResult((_selectedSuit, 2));
-            UiManager.Instance.HidePanel(this);
+            passButton.interactable = false;
+            orderUpButton.interactable = false;
+            orderUpAndGoAloneButton.interactable = false;
         }
 
         private IEnumerator TimerCoroutine()
@@ -164,6 +182,11 @@ namespace Ui.GamePlayScreens
                 OnClickOrderItUpButton();
             else
                 OnClickPassButton();
+        }
+
+        private void OnTrumpSetAndDisplayed()
+        {
+            UiManager.Instance.HidePanel(this);
         }
     }
 

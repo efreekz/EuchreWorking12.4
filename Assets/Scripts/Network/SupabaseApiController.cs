@@ -241,7 +241,43 @@ namespace Network
                 return false;
             }
         }
-
         
+        public static async UniTask<bool> IsLobbyReady(string lobbyId)
+        {
+            var url = $"{BaseURL}/rpc/is_lobby_ready";
+            var json = JsonConvert.SerializeObject(new
+            {
+                p_lobby_id = lobbyId
+            });
+
+            using var request = new UnityWebRequest(url, "POST");
+            request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
+            request.downloadHandler = new DownloadHandlerBuffer();
+            request.SetRequestHeader("apikey", APIKey);
+            request.SetRequestHeader("Authorization", $"Bearer {AuthorizationKey}");
+            request.SetRequestHeader("Content-Type", "application/json");
+
+            var op = request.SendWebRequest();
+            while (!op.isDone)
+                await UniTask.Yield();
+
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+                var responseText = request.downloadHandler.text;
+                // Supabase RPC returns "true" or "false" as a string
+                if (bool.TryParse(responseText, out var isReady))
+                {
+                    GameLogger.LogNetwork($"✅ Lobby {lobbyId} readiness check: {isReady}");
+                    return isReady;
+                }
+                GameLogger.LogNetwork($"⚠️ Could not parse lobby readiness response for {lobbyId}: {responseText}", GameLogger.LogType.Warning);
+                return false;
+            }
+            else
+            {
+                GameLogger.LogNetwork($"❌ Failed to check lobby readiness for {lobbyId}: {request.error} - {request.downloadHandler.text}", GameLogger.LogType.Error);
+                return false;
+            }
+        }
     }
 }

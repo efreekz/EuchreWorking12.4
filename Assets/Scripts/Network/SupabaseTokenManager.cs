@@ -24,8 +24,8 @@ namespace Network
             {
                 if (_instance == null)
                 {
-                    // Try to find existing instance
-                    _instance = FindObjectOfType<SupabaseTokenManager>();
+                    // Try to find existing instance with the modern API to avoid obsolete warnings
+                    _instance = FindFirstObjectByType<SupabaseTokenManager>();
                     
                     // If still null, auto-create
                     if (_instance == null)

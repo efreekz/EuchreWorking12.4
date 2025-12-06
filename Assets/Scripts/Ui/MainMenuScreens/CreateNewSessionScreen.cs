@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using Helper;
 using Managers;
 using Network;
@@ -157,7 +159,7 @@ namespace Ui.MainMenuScreens
                 Name = GameManager.UserData.username
             };
 
-            var joined = await SupabaseApiController.JoinLobby(sessionData.ID, player);
+            var joined = await TryAutoJoinLobbyAsync(sessionData, player, this.GetCancellationTokenOnDestroy());
             GameLogger.LogNetwork($"✅ Auto-join result: {joined}");
             
             UiManager.Instance.HidePanel(waitingPanel);
@@ -207,6 +209,58 @@ namespace Ui.MainMenuScreens
         private void OnCancelButtonClicked()
         {
             UiManager.Instance.HidePanel(this);
+        }
+
+        private async UniTask<bool> TryAutoJoinLobbyAsync(SessionData sessionData, PlayerInfo player, CancellationToken token)
+        {
+            const int maxAttempts = 4;
+            const int baseDelayMs = 250;
+
+            for (var attempt = 1; attempt <= maxAttempts; attempt++)
+            {
+                token.ThrowIfCancellationRequested();
+
+                // New: Poll for lobby readiness
+                const int maxReadyChecks = 5;
+                const int readyCheckDelayMs = 200;
+                bool lobbyIsReady = false;
+                for (int check = 0; check < maxReadyChecks; check++)
+                {
+                    GameLogger.LogNetwork($"Checking if lobby {sessionData.ID} is ready... (Attempt {check + 1}/{maxReadyChecks})");
+                    lobbyIsReady = await SupabaseApiController.IsLobbyReady(sessionData.ID);
+                    if (lobbyIsReady)
+                    {
+                        GameLogger.LogNetwork($"✅ Lobby {sessionData.ID} is ready!");
+                        break;
+                    }
+                    await UniTask.Delay(readyCheckDelayMs, cancellationToken: token);
+                }
+
+                if (!lobbyIsReady)
+                {
+                    GameLogger.LogNetwork($"❌ Lobby {sessionData.ID} was not reported as ready after {maxReadyChecks} checks.", GameLogger.LogType.Error);
+                    // Continue to next attempt, or fail if this was the last
+                    if (attempt == maxAttempts)
+                        break;
+                    int retryDelay = baseDelayMs * attempt;
+                    GameLogger.LogNetwork($"⚠️ Auto-join attempt {attempt} failed (lobby not ready). Retrying in {retryDelay}ms...");
+                    await UniTask.Delay(retryDelay, cancellationToken: token);
+                    continue; // Skip the JoinLobby attempt for this iteration if lobby wasn't ready
+                }
+                
+                var joined = await SupabaseApiController.JoinLobby(sessionData.ID, player);
+                if (joined)
+                    return true;
+
+                if (attempt == maxAttempts)
+                    break;
+
+                int delay = baseDelayMs * attempt;
+                GameLogger.LogNetwork($"⚠️ Auto-join attempt {attempt} failed. Retrying in {delay}ms...");
+                await UniTask.Delay(delay, cancellationToken: token);
+            }
+
+            return false;
         }
 
     }

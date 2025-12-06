@@ -56,6 +56,13 @@ namespace Managers
             if (result.Success)
             {
                 Freekz = result.Balance;
+                
+                // Sync to SupabaseTokenManager to keep both in sync
+                if (SupabaseTokenManager.Instance != null)
+                {
+                    SupabaseTokenManager.Instance.UpdateBalance(result.Balance);
+                }
+                
                 return true;
             }
             return false;
@@ -70,6 +77,13 @@ namespace Managers
             if (result.Success)
             {
                 Freekz = result.Balance;
+                
+                // Sync to SupabaseTokenManager to keep both in sync
+                if (SupabaseTokenManager.Instance != null)
+                {
+                    SupabaseTokenManager.Instance.UpdateBalance(result.Balance);
+                }
+                
                 return true;
             }
             return false;

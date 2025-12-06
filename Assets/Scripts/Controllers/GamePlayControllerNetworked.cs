@@ -57,6 +57,8 @@ namespace Controllers
         public UniTaskCompletionSource CardExchangedTcs { get; private set; }= new();
         private UniTaskCompletionSource ScoreUpdate { get; set; }= new();
         
+        public event Action OnTrumpSuitSetAndDisplayed;
+        
         [Networked] public Suit CurrentTrickSuit { get; set; }
         [Networked, Capacity(4)] private NetworkArray<NetworkBool> PlayersInitialized => default;
 
@@ -159,6 +161,17 @@ namespace Controllers
             }
             
             GameManager.EndGameResult(playerManager.TeamA, playerManager.TeamB, playerManager.GetLocalPlayerBase().PlayerIndex, playerManager.GetPlayers());
+            
+            // This was the missing call. Trigger the currency transaction after the game result is calculated.
+            if (GameManager.GamesResult != null)
+            {
+                await CurrencyManager.CreditGameReward(
+                    GameManager.JoinedSessionData.ID,
+                    GameManager.JoinedSessionData.Fee,
+                    GameManager.GamesResult.reward,
+                    GameManager.GamesResult.isLocalPlayerWinner
+                );
+            }
         }
 
         #region Setup Dealer
@@ -401,13 +414,22 @@ namespace Controllers
                 {
                     trumpCallerIndex = playerAndChoice.PlayerIndex;
                     GameLogger.ShowLog($"Player {trumpCallerIndex} accepted trump.");
-                    // Show appropriate message based on whether player is dealer
                     bool isDealer = current.PlayerIndex == playerManager.DealerIndex;
-                    string message = isDealer ? "Pick it Up" : "Order Up";
-                    RPC_PlayMessage(current.PlayerIndex, message, true);
-                    await ExchangeTopKittyCardWithDealer();
-                    // Hide the "Pick it Up" message after dealer finishes
-                    RPC_HideMessage(current.PlayerIndex);
+                    bool showCallerMessage = !isDealer;
+                    if (showCallerMessage)
+                    {
+                        RPC_PlayMessage(current.PlayerIndex, "Order Up", true);
+                    }
+
+                    // Only show "It Lives" if the dealer personally picked it up
+                    string dealerPrompt = isDealer ? "It Lives" : "Discard";
+                    await ExchangeTopKittyCardWithDealer(dealerPrompt);
+
+                    if (showCallerMessage)
+                    {
+                        RPC_HideMessage(current.PlayerIndex);
+                    }
+
                     await UniTask.Delay(TimeSpan.FromSeconds(5));
 
                     break;
@@ -416,12 +438,20 @@ namespace Controllers
                 {
                     trumpCallerIndex = playerAndChoice.PlayerIndex;
                     GameLogger.ShowLog($"Player {trumpCallerIndex} accepted trump.");
-                    // Show appropriate message based on whether player is dealer
                     bool isDealer = current.PlayerIndex == playerManager.DealerIndex;
-                    string message = isDealer ? "Pick it Up Alone" : "Order Up Alone";
-                    RPC_PlayMessage(current.PlayerIndex, message, true);
-                    await ExchangeTopKittyCardWithDealer();
-                    RPC_HideMessage(current.PlayerIndex);
+                    bool showCallerMessage = !isDealer;
+                    if (showCallerMessage)
+                    {
+                        RPC_PlayMessage(current.PlayerIndex, "Order Up Alone", true);
+                    }
+
+                    // Only show "It Lives Alone" if the dealer personally picked it up
+                    string dealerPrompt = isDealer ? "It Lives Alone" : "Discard";
+                    await ExchangeTopKittyCardWithDealer(dealerPrompt);
+
+                    if (showCallerMessage)
+                        RPC_HideMessage(current.PlayerIndex);
+
                     await UniTask.Delay(TimeSpan.FromSeconds(5));
                     break;
                 }
@@ -432,12 +462,15 @@ namespace Controllers
             return new TrumpSelectionData(trumpCallerIndex, suit, choice);
         }
 
-        private async UniTask ExchangeTopKittyCardWithDealer()
+        private async UniTask ExchangeTopKittyCardWithDealer(string dealerPrompt)
         {
             CardExchangedTcs = new UniTaskCompletionSource();
             var dealer = playerManager.GetDealerPlayer();
             RPC_PlayTurnNotification(dealer.PlayerIndex);
-            RPC_PlayMessage(dealer.PlayerIndex, $"Discard", true);
+            if (!string.IsNullOrWhiteSpace(dealerPrompt))
+            {
+                RPC_PlayMessage(dealer.PlayerIndex, dealerPrompt, true);
+            }
 
             if (dealer.IsBot)
             {
@@ -452,7 +485,7 @@ namespace Controllers
             
             await CardExchangedTcs.Task;
             
-            // Hide the "Discard" message and clear turn notification after exchange is complete
+            // Hide the dealer prompt and clear turn notification after exchange is complete
             RPC_HideMessage(dealer.PlayerIndex);
             dealer.UpdateUiOnEndTurn();
         }
@@ -497,14 +530,14 @@ namespace Controllers
                 {
                     trumpCallerIndex = playerAndChoice.PlayerIndex;
                     GameLogger.ShowLog($"Player {trumpCallerIndex} accepted trump.");
-                    RPC_PlayMessage(current.PlayerIndex, $"{suit} selected as Trump");
+                    RPC_PlayMessage(current.PlayerIndex, $"{suit} is trump", true);
                     break;
                 }
                 else if (choice == 2)
                 {
                     trumpCallerIndex = playerAndChoice.PlayerIndex;
                     GameLogger.ShowLog($"Player {trumpCallerIndex} accepted trump And decided to go alone.");
-                    RPC_PlayMessage(current.PlayerIndex, $"{suit} selected as Trump & Player {playerAndChoice.PlayerIndex} decided to play alone");
+                    RPC_PlayMessage(current.PlayerIndex, $"{suit} is trump & Player {playerAndChoice.PlayerIndex} decided to play alone", true);
                     break;
                 }
                 else
@@ -546,6 +579,7 @@ namespace Controllers
         {
             if (Runner.IsServer)
             {
+                // Don't hide trump announcement immediately - let it stay visible during first turn
                 var currentPlayer = playerManager.GetLeadPlayerToPlay();
 
                 while (currentPlayer.hand.Count > 0)
@@ -842,6 +876,7 @@ namespace Controllers
             GameLogger.ShowLog($"setting up Trump Data as (player: {playerIndex} : Suit: {suit}, Choice: {choice})");
             var trumpCaller = playerManager.GetPlayer(playerIndex);
             _gamePlayScreen.ActiveTrumpSuit(_trumpSelectionData.Suit, trumpCaller.PlayerElementUi);
+            OnTrumpSuitSetAndDisplayed?.Invoke();
             _gamePlayScreen.DisableDeck();
             
             if (choice == 2)
